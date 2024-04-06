@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shortest Path Finder</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    #map {
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <center><h1> Welcome To MapNavigator </h1></center> 
+  <label for="start">Enter starting location:</label>
+  <input type="text" id="start" />
+  <label for="end">Enter destination:</label>
+  <input type="text" id="end" />
+  <button onclick="findShortestPath()">Find Shortest Path</button>
+  <p id="shortestDistance"></p>
+  <p id="shortestPath"></p>
+  <div id="map"></div>
+
+<script>
+function dijkstra(graph, start) {
+  let distances = {};
+  for (let node in graph) {
+    distances[node] = Infinity;
+  }
+  distances[start] = 0;
+
+  let queue = [{ distance: 0, node: start }];
+  let previousNode = {};
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.distance - b.distance);
+    let { distance: currentDistance, node: currentNode } = queue.shift();
+
+    if (currentDistance > distances[currentNode]) {
+      continue;
+    }
+
+    for (let neighbor in graph[currentNode]) {
+      let weight = graph[currentNode][neighbor];
+      let distance = currentDistance + weight;
+
+      if (distance < distances[neighbor]) {
+        distances[neighbor] = distance;
+        queue.push({ distance: distance, node: neighbor });
+        previousNode[neighbor] = currentNode;
+      }
+    }
+  }
+  return { distances, previousNode };
+}
+
+function shortestPath(graph, start, end) {
+  let { distances, previousNode } = dijkstra(graph, start);
+  let path = [];
+  let currentNode = end;
+
+  while (currentNode) {
+    path.push(currentNode);
+    currentNode = previousNode[currentNode];
+  }
+  return { distance: distances[end], path: path.reverse() };
+}
+
+function bfs(g, s, d, sp, hd) {
+  const visited = {};
+  const queue = [];
+  queue.push(s);
+
+  function traverse() {
+    if (queue.length === 0) return;
+
+    const current = queue.shift();
+    visited[current] = true;
+
+    if (sp.includes(current) && current in hd) {
+      highlightNode(current, 'red');
+      alert(`You are going to reach :: ${current} \n there is a Hazard at ${current}:: ${hd[current]}`);
+    } else {
+      highlightNode(current, 'green'); // Normal path in green
+    }
+
+    setTimeout(() => {
+      if (current === d) {
+        // Implement action when reaching the destination
+        alert(`current location :: ${current} \n You Reached Your destination...! \n Thank You`);
+        return;
+      }
+
+      for (let neighbor in g[current]) {
+        if (sp.includes(neighbor) && !visited[neighbor]) {
+          queue.push(neighbor);
+        }
+      }
+
+      traverse(20000); // Move to the next node after delay
+    }, 1500);
+  }
+
+  function highlightNode(node, color) {
+    // Implement highlighting logic here (e.g., change node color)
+    const marker = markers[node];
+    marker.setStyle({ fillColor: color, color: color });
+  }
+
+  traverse(20000);
+}
+
+function displayShortestPathInfo(distance, path) {
+  document.getElementById('shortestDistance').innerText = `Shortest Distance: ${distance} km`;
+  document.getElementById('shortestPath').innerText = `Shortest Path: ${path.join(' -> ')}`;
+}
+
+function highlightShortestPathEdges(shortestPathEdges) {
+  shortestPathEdges.forEach(edge => {
+    edge.setStyle({ color: 'green' });
+  });
+}
+
+function findShortestPath() {
+  const startNode = document.getElementById('start').value;
+  const endNode = document.getElementById('end').value;
+
+  const shortestPathInfo = shortestPath(exampleGraph, startNode, endNode);
+  displayShortestPathInfo(shortestPathInfo.distance, shortestPathInfo.path);
+
+  const hazards = { 'Jaipur': 'Uneven Roads', 'Bangalore': 'Heavy Traffic' };
+  bfs(exampleGraph, startNode, endNode, shortestPathInfo.path, hazards);
+
+  const shortestPathEdges = getShortestPathEdges(exampleGraph, shortestPathInfo.path);
+  highlightShortestPathEdges(shortestPathEdges);
+}
+
+// Define your graph with cities and distances
+const exampleGraph = {
+  'Mumbai': { 'Jaipur': 1200, 'Bangalore': 1000 },
+  'Jaipur': { 'Mumbai': 1200, 'Bangalore': 1500, 'Delhi': 600 },
+  'Bangalore': { 'Mumbai': 1000, 'Jaipur': 1500, 'Delhi': 2000 },
+  'Delhi': { 'Jaipur': 600, 'Bangalore': 2000 }
+};
+
+// Create a Leaflet map
+const map = L.map('map').setView([20.5937, 78.9629], 5);
+
+// Add OpenStreetMap tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// Add markers for each city
+const markers = {};
+for (let city in exampleGraph) {
+  markers[city] = L.circleMarker(getLatLng(city), { radius: 8, fillOpacity: 1, color: 'black', fillColor: 'white' })
+    .addTo(map)
+    .bindPopup(city);
+}
+
+// Add polylines for paths
+const edges = [];
+for (let city in exampleGraph) {
+  for (let neighbor in exampleGraph[city]) {
+    edges.push(L.polyline([getLatLng(city), getLatLng(neighbor)], { color: 'gray' }).addTo(map));
+  }
+}
+
+// Function to get latitude and longitude for a city (simplified)
+function getLatLng(city) {
+  const cityPositions = {
+    'Mumbai': [19.0760, 72.8777],
+    'Jaipur': [26.9124, 75.7873],
+    'Bangalore': [12.9716, 77.5946],
+    'Delhi': [28.6139, 77.2090]
+  };
+  return cityPositions[city];
+}
+
+function getShortestPathEdges(graph, path) {
+  const edges = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const city = path[i];
+    const neighbor = path[i + 1];
+    edges.push(findEdge(graph, city, neighbor));
+  }
+  return edges;
+}
+
+function findEdge(graph, city, neighbor) {
+  return graph[city][neighbor] || graph[neighbor][city];
+}
+</script>
+</body>
+</html>
