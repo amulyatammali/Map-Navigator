@@ -1,6 +1,6 @@
 # Map-Navigator
 This repository contains my mini project titled 'map Navigator'.
-# Objective Of Project:
+#  Project Objective:
 The main objective of the project is to facilitate safe and efficient navigation by 
 providing users with the shortest path between two locations on a map while 
 ensuring awareness of potential hazards along the way. By integrating hazard 
